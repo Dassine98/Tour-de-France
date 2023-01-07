@@ -1,0 +1,270 @@
+1- SELECT count(*)
+   FROM DICT;
+2- 
+SELECT *
+FROM dict
+WHERE TABLE_NAME LIKE 'USER_TAB%';
+3-
+DESC ALL_TAB_COLUMNS;
+DESC USER_USERS;
+DESC ALL_CONSTRAINTS;
+DESC USER_TAB_PRIVS;
+SELECT *
+FROM DICT
+WHERE TABLE_NAME='USER_USERS';
+
+4-
+ALL_TABLES decrit les tables relationnelles accessibles par l'utilisateur
+USER_TABLES decrit les tables relationnelles propres a l'utilisateur
+5-
+select USERNAME, ACCOUNT_STATUS, DEFAULT_TABLESPACE from user_users;
+6-
+desc tabs;
+desc USERTP2.TABS;
+7-DESC USERTP2.EMPLOYE;
+8-CONN
+USERTP2
+SELECT *
+FROM EMPLOYE.USER_CONSTRAINTS;
+9-Leurs noms commencent par 'FK'
+10-
+select owner, table_name from all_tables where table_name like 'OPERATION';
+11-
+DESC USERTP2.EMPLOYE;
+DESC USERTP2.OPERATION;
+
+SELECT constraint_name, table_name, constraint_type
+FROM USER_CONSTRAINTS
+WHERE table_name = 'EMPLOYE';
+12-
+select * from USER_ROLE_PRIVS where USERNAME='USER1';
+select * from USER_TAB_PRIVS where Grantee = 'USER1';
+select * from USER_SYS_PRIVS where USERNAME = 'USER1';
+13-
+SELECT *
+FROM USER_OBJECTS;
+14-
+select tablespace_name from dba_tables where table_name = 'OPERATION';
+select BYTES, BLOCKS from user_segments where segment_name = 'OPERATION';
+SELECT 65536/1024 FROM DUAL;
+
+
+Partie2:
+1-
+2-
+select * from user_sys_privs;
+GRANT CREATE SESSION TO USERTEST1;
+3-
+GRANT CREATE TABLE USER TO USERTEST1;
+4-
+ALTER USER usertest1 QUOTA UNLIMITED ON system;
+5-
+
+6-
+create user usertest2 identified by usertest2;
+grant create session to usertest2;
+grant alter on USERTEST1.equipe to usertest2;
+grant alter on USERTEST1.etape to usertest2;
+7-
+a)
+ALTER TABLE usertest1.EQUIPE ADD CONSTRAINT CHECK_NOMEQ CHECK(NomEq is NOT NULL);
+b)
+ALTER TABLE usertest1.EQUIPE ADD CONSTRAINT Uni_Direc UNIQUE(DirecteurSportif);
+GRANT CREATE ANY INDEX TO USERTEST2;
+c)
+ALTER TABLE usertest1.ETAPE ADD CONSTRAINT CHECK_DISTANCE CHECK(DISTANCE BETWEEN 10 AND 300);
+D)
+ALTER TABLE usertest1.ETAPE ADD CONSTRAINT CHECK_TYPE_ETAPE CHECK(TYPE_ETAPE IN ('PLAT','ACCIDENTE','MONTAGNE','C.L.M INDIVIDUEL'));
+9-
+CREATE OR REPLACE FUNCTION TOTAL_TIME(x IN Participer.NumC%type)RETURN NUMBER
+IS nb int;
+BEGIN
+SELECT SUM(TempsRealise) INTO nb
+FROM Participer
+WHERE NumC = x;
+Return nb;
+END;
+/
+10-
+CREATE OR REPLACE FUNCTION nb_coureurs(x IN Coureur.NumEq%type)RETURN NUMBER
+IS nb int;
+BEGIN
+SELECT Count(*) INTO nb
+FROM Coureur
+WHERE NumEq = x;
+Return nb;
+END;
+/
+11-
+CREATE OR REPLACE PROCEDURE ListeCoureurs(x IN Equipe.NumEq%type)
+IS
+CURSOR cr IS SELECT * FROM COUREUR WHERE NumEq = x;
+BEGIN
+FOR c IN cr LOOP
+DBMS_OUTPUT.PUT_LINE('Coureur numero: '||c.NumC||' Nom: '||c.NomC||' Pays: '||c.NomPays||' Equipe numero: '||x);
+END LOOP;
+END;
+/
+12-
+CREATE OR REPLACE PROCEDURE ListeEquipe
+IS
+Cursor cr IS SELECT * FROM EQUIPE;
+c cr%rowtype;
+Cursor pr(a IN Equipe.NumEq%type) IS SELECT NumC, NumEq FROM COUREUR WHERE a = NumEq;
+p pr%rowtype;
+T NUMBER;
+N NUMBER;
+b NUMBER;
+BEGIN
+FOR c IN cr LOOP
+T:=0;
+N:=nb_coureurs(c.NumEq);
+ListeCoureurs(c.NumEq);
+FOR p IN pr(c.NumEq) LOOP
+SELECT TOTAL_TIME(p.NumC) INTO b
+FROM COUREUR;
+T:=T+b;
+END LOOP;
+DBMS_OUTPUT.PUT_LINE('Equipe numero:'||c.NumEq||' Nom: '||c.NomEq||' Directeur Sportif: '||c.DirecteurSportif||' Date de creation: '||c.DateCreation||' Nombre de coureurs: '||N||' Temps realise total '||T); 
+END LOOP;
+END;
+/
+12-
+CREATE OR REPLACE PROCEDURE ListeEquipe
+IS
+Cursor cr IS SELECT * FROM EQUIPE;
+c cr%rowtype;
+Cursor pr(a IN Equipe.NumEq%type) IS SELECT NumC, NumEq FROM COUREUR WHERE a = NumEq;
+p pr%rowtype;
+T NUMBER;
+N NUMBER;
+b NUMBER;
+BEGIN
+FOR c IN cr LOOP
+T:=0;
+N:=nb_coureurs(c.NumEq);
+ListeCoureurs(c.NumEq);
+FOR p IN pr(c.NumEq) LOOP
+SELECT TOTAL_TIME(p.NumC) INTO b
+FROM COUREUR;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+b:=0;
+END;
+T:=T+b;
+END LOOP;
+DBMS_OUTPUT.PUT_LINE('Equipe numero:'||c.NumEq||' Nom: '||c.NomEq||' Directeur Sportif: '||c.DirecteurSportif||' Date de creation: '||c.DateCreation||' Nombre de coureurs: '||N||' Temps realise total '||T); 
+END LOOP;
+END;
+/
+IF b is NULL THEN RAISE NO_Data_Found; END IF;
+13-
+grant Execute on userTest1.ListeCoureurs to usertest2;
+14-
+CREATE OR REPLACE VIEW V1(NumC,Nbpart)
+AS
+SELECT NumC,Count(*)
+FROM Participer
+Group by NumC;
+
+CREATE OR REPLACE VIEW NbParticipants(NumC,NomC,Nbpart)
+AS
+SELECT c.NumC, NomC, Nbpart
+FROM V1, Coureur c
+WHERE c.NumC = V1.NumC;
+
+select *
+from NbParticipants;
+
+15-
+CREATE OR REPLACE VIEW V2(NumC)
+AS
+SELECT NumC
+FROM COUREUR
+MINUS
+SELECT NumC
+FROM PARTICIPER;
+
+CREATE OR REPLACE VIEW NonParticipants(NumC, NomC)
+AS
+SELECT c.NumC, NomC
+FROM V2, Coureur c
+WHERE V2.NumC = c.NumC;
+
+SELECT *
+FROM NONPARTICIPANTS;
+
+16-
+SELECT NumETAPE, MIN(TEMPSREALISE)
+FROM PARTICIPER
+GROUP BY NumETAPE;
+
+17-
+CREATE OR REPLACE VIEW TempsTotalEquipe(NumEq, TempsRealise)
+AS 
+SELECT e.NumEq, SUM(TOTAL_TIME(NumC))
+FROM Coureur c, Equipe e
+WHERE c.NumEq = e.NumEq
+GROUP BY e.NumEq;
+
+SELECT NumEq, TempsRealise
+from TempsTotalEquipe
+where TempsRealise IN(SELECT MIN(TempsRealise) FROM TempsTotalEquipe);
+
+18-
+ALTER TABLE Equipe ADD tempsT NUMBER DEFAULT 0;
+UPDATE EQUIPE set TempsT= (Select TempsRealise
+			    From TempsTotalEquipe
+			    WHERE Equipe.NumEq = NumEq);
+
+CREATE OR REPLACE TRIGGER MAJ_TEMPST
+AFTER
+INSERT OR DELETE ON PARTICIPER
+FOR EACH ROW
+BEGIN
+IF INSERTING THEN UPDATE Equipe SET TempsT = TempsT + :new.TempsRealise WHERE NumEq = (select numeq from coureur where numc=:new.numc); END IF;
+IF DELETING THEN UPDATE Equipe SET  TempsT = TempsT - :old.TempsRealise WHERE NumEq = (select numeq from coureur where numc=:old.numc); END IF; 
+END;
+/ 
+19-
+ALTER TABLE Equipe ADD Nbc Number DEFAULT 0;
+
+UPDATE Equipe SET Nbc = nb_Coureurs(NumEq);
+
+CREATE OR REPLACE TRIGGER MAJ_Nbc
+AFTER
+INSERT OR DELETE ON COUREUR
+FOR EACH ROW
+BEGIN 
+IF INSERTING THEN UPDATE EQUIPE SET NBC = NBC + 1 WHERE NumEq = :NEW.NumEq; END IF;
+IF DELETING THEN UPDATE EQUIPE SET NBC = NBC - 1 WHERE NumEq = :OLD.NumEq; END IF;
+END;
+/
+
+20-
+DELETE FROM EQUIPE WHERE NomEq='FESTINA';
+-Supprimer les contraintes de cle etrangere dans les tables(On supprime FK_COUREUR_EQUIPE)
+ALTER TABLE COUREUR DROP CONSTRAINT FK_COUREUR_EQUIPE;
+-Ajouter on delete cascade aux contraintes de cle etrangere, donc on supprime la contrainte puis on la recree de cette maniere:
+ALTER TABLE COUREUR ADD CONSTRAINT FK_COUREUR_EQUIPE FOREIGN KEY(NumEq) REFERENCES EQUIPE ON DELETE CASCADE;
+-Supprimer les tables dans lequelles la NumEq est une cle etrangere d'abord(On supprime Coureur puisqu'elle dispose de NumEq comme cle etrangere)
+DROP TABLE COUREUR CASCADE;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
